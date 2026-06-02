@@ -34,7 +34,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   setIsCollapsed,
   onCreateProjectClick
 }) => {
-  const { projects, currentUser, logout } = useApp();
+  const { projects, currentUser, logout, t } = useApp();
   const navigate = useNavigate();
 
   const handleLogout = () => {
@@ -48,9 +48,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
   // Navigation Links
   const navItems = [
-    { name: 'Dashboard', path: '/', icon: <LayoutDashboard className="w-5 h-5" /> },
-    { name: 'Projects', path: '/projects', icon: <FolderKanban className="w-5 h-5" /> },
-    { name: 'Settings', path: '/settings', icon: <SettingsIcon className="w-5 h-5" /> }
+    { key: 'dashboard', name: t('dashboard'), path: '/', icon: <LayoutDashboard className="w-5 h-5" /> },
+    { key: 'projects', name: t('projects'), path: '/projects', icon: <FolderKanban className="w-5 h-5" /> },
+    { key: 'settings', name: t('settings'), path: '/settings', icon: <SettingsIcon className="w-5 h-5" /> }
   ];
 
   const sidebarContent = (
@@ -80,7 +80,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             id="toggle-sidebar"
             onClick={() => setIsCollapsed(!isCollapsed)}
             className="hidden lg:flex p-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white transition-colors"
-            title={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            title={isCollapsed ? t('expandSidebar') : t('collapseSidebar')}
           >
             {isCollapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
           </button>
@@ -93,7 +93,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           {navItems.map(item => (
             <NavLink
               key={item.path}
-              id={`nav-${item.name.toLowerCase().replace(' ', '-')}`}
+              id={`nav-${item.key}`}
               to={item.path}
               onClick={() => setIsOpenMobile(false)}
               className={({ isActive }) =>
@@ -114,7 +114,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         {(!isCollapsed || isOpenMobile) && (
           <div className="space-y-2">
             <div className="flex items-center justify-between px-3 text-xs font-bold text-slate-500 tracking-wider uppercase">
-              <span>Favorites</span>
+              <span>{t('favorites')}</span>
               <span className="font-mono text-[10px] bg-slate-800 text-slate-400 px-1.5 py-0.5 rounded-full">
                 {starredProjects.length}
               </span>
@@ -153,7 +153,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         {(!isCollapsed || isOpenMobile) && (
           <div className="space-y-2">
             <div className="flex items-center justify-between px-3 text-xs font-bold text-slate-500 tracking-wider uppercase">
-              <span>My Boards</span>
+              <span>{t('projects')}</span>
               <button
                 id="sidebar-new-project"
                 onClick={(e) => {
@@ -161,8 +161,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   onCreateProjectClick();
                   setIsOpenMobile(false);
                 }}
-                className="p-0.5 rounded text-slate-500 hover:text-white hover:bg-slate-800 transition-colors"
-                title="Create board"
+                className="p-0.5 rounded text-slate-500 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
+                title={t('createProject')}
               >
                 <Plus className="w-4 h-4" />
               </button>
@@ -196,13 +196,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
         <button
           id="sidebar-logout"
           onClick={handleLogout}
-          className={`flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm font-medium text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 transition-colors text-left ${
+          className={`flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm font-medium text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 transition-colors text-left cursor-pointer ${
             isCollapsed && !isOpenMobile ? 'justify-center' : ''
           }`}
-          title="Sign Out"
+          title={t('signOut')}
         >
           <LogOut className="w-5 h-5 flex-shrink-0" />
-          {(!isCollapsed || isOpenMobile) && <span>Sign Out</span>}
+          {(!isCollapsed || isOpenMobile) && <span>{t('signOut')}</span>}
         </button>
       </div>
     </div>

@@ -22,12 +22,163 @@ import {
   ArrowUpDown,
   CornerDownRight,
   Sparkles,
-  Inbox
+  Inbox,
+  TrendingUp,
+  BarChart2,
+  Info,
+  Activity,
+  ListTodo
 } from 'lucide-react';
+import {
+  ResponsiveContainer,
+  AreaChart,
+  Area,
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend
+} from 'recharts';
 
-type ProjectViewTab = 'board' | 'list';
+type ProjectViewTab = 'board' | 'list' | 'analytics';
 type SortColumn = 'title' | 'assignee' | 'priority' | 'status' | 'dueDate' | 'commentCount';
 type SortDirection = 'asc' | 'desc';
+
+interface CustomTooltipProps {
+  active?: boolean;
+  payload?: any[];
+  label?: string;
+  chartType: 'burnup' | 'burndown';
+  theme: 'light' | 'dark';
+}
+
+const CustomTooltip: React.FC<CustomTooltipProps> = ({ active, payload, label, chartType, theme }) => {
+  if (active && payload && payload.length) {
+    return (
+      <div className={`p-3 rounded-xl border shadow-lg font-sans text-xs transition-all space-y-1 ${
+        theme === 'dark' 
+          ? 'bg-slate-900 border-slate-800 text-white shadow-slate-950/50' 
+          : 'bg-white border-slate-150 text-slate-800 shadow-slate-200/50'
+      }`}>
+        <p className="font-bold text-[11px] text-slate-400 uppercase tracking-wider">{label}</p>
+        <div className="h-px bg-slate-100 dark:bg-slate-800 my-1 w-full" />
+        {payload.map((item: any, index: number) => {
+          const name = item.name === 'total' 
+            ? 'Total Scope' 
+            : item.name === 'completed' 
+              ? 'Completed Tasks' 
+              : item.name === 'remaining' 
+                ? 'Remaining Tasks' 
+                : item.name === 'ideal' 
+                  ? 'Ideal Projection' 
+                  : item.name;
+          
+          return (
+            <div key={index} className="flex justify-between items-center gap-8 font-medium">
+              <span className="flex items-center gap-1.5 text-[11px] text-slate-500 dark:text-slate-400">
+                <span className="w-2 h-2 rounded-full" style={{ backgroundColor: item.color }} />
+                <span>{name}:</span>
+              </span>
+              <span className="font-mono font-bold text-slate-800 dark:text-slate-100">
+                {typeof item.value === 'number' ? Math.round(item.value) : item.value}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+    );
+  }
+  return null;
+};
+
+const generateTimelineData = (projectTasks: Task[], projectCreatedAt: string, chartType: 'burnup' | 'burndown') => {
+  if (projectTasks.length === 0) return [];
+  
+  // Find min and max dates
+  const taskCreatedDates = projectTasks.map(t => new Date(t.createdAt.split('T')[0]));
+  const taskDueDates = projectTasks.map(t => {
+    // If due date is empty list fallback
+    const dStr = t.dueDate ? t.dueDate : '2026-06-15';
+    return new Date(dStr);
+  });
+  
+  let startDate = new Date(Math.min(...taskCreatedDates.map(d => d.getTime())));
+  let endDate = new Date(Math.max(...taskDueDates.map(d => d.getTime())));
+  
+  // Guard against invalid or extreme ranges
+  if (isNaN(startDate.getTime())) {
+    startDate = new Date('2026-05-15');
+  } else {
+    startDate.setDate(startDate.getDate() - 2);
+  }
+  
+  if (isNaN(endDate.getTime())) {
+    endDate = new Date('2026-06-15');
+  } else {
+    endDate.setDate(endDate.getDate() + 2);
+  }
+  
+  const timeDiff = endDate.getTime() - startDate.getTime();
+  const dayDiff = Math.ceil(timeDiff / (1000 * 3600 * 24));
+  
+  if (dayDiff > 45) {
+    startDate = new Date('2026-05-15');
+    endDate = new Date('2026-06-15');
+  } else if (dayDiff < 10) {
+    startDate.setDate(startDate.getDate() - 5);
+    endDate.setDate(endDate.getDate() + 5);
+  }
+  
+  const dates: { dateStr: string; label: string }[] = [];
+  const current = new Date(startDate);
+  
+  while (current <= endDate) {
+    const dStr = current.toISOString().split('T')[0];
+    const label = current.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' });
+    dates.push({ dateStr: dStr, label });
+    current.setDate(current.getDate() + 1);
+  }
+  
+  const todayStr = '2026-06-02';
+  
+  return dates.map(({ dateStr, label }, index) => {
+    const createdTasks = projectTasks.filter(t => {
+      const createdOn = t.createdAt.split('T')[0];
+      return createdOn <= dateStr;
+    });
+    
+    const completedTasks = createdTasks.filter(t => {
+      if (t.status !== 'done') return false;
+      const completedOn = (t.updatedAt || t.createdAt).split('T')[0];
+      return completedOn <= dateStr;
+    });
+    
+    const totalCount = createdTasks.length;
+    const completedCount = completedTasks.length;
+    const remainingCount = Math.max(0, totalCount - completedCount);
+    
+    const finalTotalTasks = projectTasks.length;
+    const totalDates = dates.length;
+    const idealValue = totalDates > 1
+      ? (index / (totalDates - 1)) * finalTotalTasks
+      : finalTotalTasks;
+      
+    const idealBurnup = parseFloat(idealValue.toFixed(1));
+    const idealBurndown = parseFloat((finalTotalTasks - idealValue).toFixed(1));
+
+    return {
+      date: dateStr,
+      label,
+      total: totalCount,
+      completed: completedCount,
+      remaining: remainingCount,
+      ideal: chartType === 'burnup' ? idealBurnup : idealBurndown,
+      isFuture: dateStr > todayStr
+    };
+  });
+};
 
 export const ProjectView: React.FC = () => {
   const { projectId } = useParams<{ projectId: string }>();
@@ -39,12 +190,14 @@ export const ProjectView: React.FC = () => {
     toggleStarProject,
     moveTaskStatus,
     updateTask,
-    addToast
+    addToast,
+    theme
   } = useApp();
   const navigate = useNavigate();
 
   // Active View Tab State
   const [activeTab, setActiveTab] = useState<ProjectViewTab>('board');
+  const [chartType, setChartType] = useState<'burnup' | 'burndown'>('burnup');
 
   // Interactive filters
   const [searchFilter, setSearchFilter] = useState('');
@@ -66,6 +219,16 @@ export const ProjectView: React.FC = () => {
   const project = useMemo(() => {
     return projects.find(p => p.id === projectId);
   }, [projects, projectId]);
+
+  // Project-specific raw task collection for timeline charts
+  const projectTasks = useMemo(() => {
+    return project ? tasks.filter(t => t.projectId === project.id) : [];
+  }, [tasks, project]);
+
+  // Generate chart timeline data based on selected type
+  const timelineData = useMemo(() => {
+    return project ? generateTimelineData(projectTasks, project.createdAt, chartType) : [];
+  }, [projectTasks, project, chartType]);
 
   if (!project) {
     return (
@@ -236,6 +399,18 @@ export const ProjectView: React.FC = () => {
             >
               <List className="w-3.5 h-3.5" />
               <span>List Grid</span>
+            </button>
+            <button
+              id="toggle-analytics-view"
+              onClick={() => setActiveTab('analytics')}
+              className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-bold uppercase transition-all cursor-pointer ${
+                activeTab === 'analytics'
+                  ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-xs'
+                  : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-350'
+              }`}
+            >
+              <TrendingUp className="w-3.5 h-3.5" />
+              <span>Progress</span>
             </button>
           </div>
 
@@ -530,6 +705,309 @@ export const ProjectView: React.FC = () => {
                 <p className="text-xs text-slate-500 mt-1">Please try modifying your text keywords or category dropdown selections.</p>
               </div>
             )}
+          </div>
+        )}
+
+        {/* Dynamic Analytics / Progress View Render */}
+        {activeTab === 'analytics' && (
+          <div className="space-y-6 animate-in fade-in duration-200">
+            {/* KPI Cards Row */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="bg-white dark:bg-slate-900 border border-slate-150 dark:border-slate-800 p-5 rounded-2xl transition-colors shadow-3xs flex items-center justify-between">
+                <div className="space-y-1">
+                  <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest block">Total Scope</span>
+                  <span className="text-2xl font-bold text-slate-800 dark:text-white font-mono">{projectTasks.length}</span>
+                  <p className="text-[10px] text-slate-400 dark:text-slate-500 font-medium">Total tracked tasks</p>
+                </div>
+                <div className="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 flex items-center justify-center">
+                  <Activity className="w-5 h-5" />
+                </div>
+              </div>
+
+              <div className="bg-white dark:bg-slate-900 border border-slate-150 dark:border-slate-800 p-5 rounded-2xl transition-colors shadow-3xs flex items-center justify-between">
+                <div className="space-y-1">
+                  <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest block">Completed</span>
+                  <span className="text-2xl font-bold text-emerald-600 dark:text-emerald-400 font-mono">
+                    {projectTasks.filter(t => t.status === 'done').length}
+                  </span>
+                  <p className="text-[10px] text-slate-450 dark:text-slate-400 font-medium">
+                    {projectTasks.length ? Math.round((projectTasks.filter(t => t.status === 'done').length / projectTasks.length) * 100) : 0}% completion speed
+                  </p>
+                </div>
+                <div className="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-450 flex items-center justify-center">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+                  </svg>
+                </div>
+              </div>
+
+              <div className="bg-white dark:bg-slate-900 border border-slate-150 dark:border-slate-800 p-5 rounded-2xl transition-colors shadow-3xs flex items-center justify-between">
+                <div className="space-y-1">
+                  <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest block">Remaining Backlog</span>
+                  <span className="text-2xl font-bold text-amber-600 dark:text-amber-400 font-mono">
+                    {projectTasks.length - projectTasks.filter(t => t.status === 'done').length}
+                  </span>
+                  <p className="text-[10px] text-slate-400 dark:text-slate-500 font-medium">Unresolved actions</p>
+                </div>
+                <div className="w-10 h-10 rounded-xl bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-450 flex items-center justify-center">
+                  <ListTodo className="w-5 h-5" />
+                </div>
+              </div>
+
+              <div className="bg-white dark:bg-slate-900 border border-slate-150 dark:border-slate-800 p-5 rounded-2xl transition-colors shadow-3xs flex items-center justify-between">
+                <div className="space-y-1">
+                  <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest block">Active Work</span>
+                  <span className="text-2xl font-bold text-purple-600 dark:text-purple-450 font-mono">
+                    {projectTasks.filter(t => t.status === 'in_progress' || t.status === 'in_review').length}
+                  </span>
+                  <p className="text-[10px] text-slate-400 dark:text-slate-500 font-medium">In Progress / Review</p>
+                </div>
+                <div className="w-10 h-10 rounded-xl bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400 flex items-center justify-center">
+                  <Trello className="w-5 h-5" />
+                </div>
+              </div>
+            </div>
+
+            {/* Main Interactive Chart Section */}
+            <div className="bg-white dark:bg-slate-900 border border-slate-150 dark:border-slate-800 rounded-2xl overflow-hidden transition-colors shadow-3xs p-6 space-y-6">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 dark:border-slate-800 pb-5">
+                <div className="space-y-1">
+                  <h3 className="text-sm font-bold text-slate-800 dark:text-white uppercase tracking-wider flex items-center gap-2">
+                    <TrendingUp className="w-4.5 h-4.5 text-blue-500" /> Project Velocity Timeline
+                  </h3>
+                  <p className="text-xs text-slate-450 dark:text-slate-400 font-medium">
+                    Sprinting progression from earliest task creation date through deadlines.
+                  </p>
+                </div>
+
+                {/* Burn up vs Burn down toggle */}
+                <div className="inline-flex bg-slate-100 dark:bg-slate-800 p-1 rounded-xl text-xs font-semibold">
+                  <button
+                    onClick={() => setChartType('burnup')}
+                    className={`px-3.5 py-1.5 rounded-lg transition-all cursor-pointer ${
+                      chartType === 'burnup'
+                        ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-xs font-bold'
+                        : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-350'
+                    }`}
+                  >
+                    Burn-up Chart
+                  </button>
+                  <button
+                    onClick={() => setChartType('burndown')}
+                    className={`px-3.5 py-1.5 rounded-lg transition-all cursor-pointer ${
+                      chartType === 'burndown'
+                        ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-xs font-bold'
+                        : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-350'
+                    }`}
+                  >
+                    Burn-down Chart
+                  </button>
+                </div>
+              </div>
+
+              {/* Chart Content Area */}
+              {timelineData.length > 0 ? (
+                <div className="w-full h-[360px] relative font-sans text-xs">
+                  <ResponsiveContainer width="100%" height="100%">
+                    {chartType === 'burnup' ? (
+                      <AreaChart
+                        data={timelineData}
+                        margin={{ top: 10, right: 15, left: -25, bottom: 0 }}
+                      >
+                        <defs>
+                          <linearGradient id="colorTotal" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.1}/>
+                            <stop offset="95%" stopColor="#3B82F6" stopOpacity={0}/>
+                          </linearGradient>
+                          <linearGradient id="colorCompleted" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="#10B981" stopOpacity={0.25}/>
+                            <stop offset="95%" stopColor="#10B981" stopOpacity={0}/>
+                          </linearGradient>
+                        </defs>
+                        <CartesianGrid
+                          strokeDasharray="3 3"
+                          stroke={theme === 'dark' ? '#334155' : '#E2E8F0'}
+                          vertical={false}
+                        />
+                        <XAxis
+                          dataKey="label"
+                          stroke={theme === 'dark' ? '#94A3B8' : '#64748B'}
+                          tickLine={false}
+                          dy={10}
+                        />
+                        <YAxis
+                          stroke={theme === 'dark' ? '#94A3B8' : '#64748B'}
+                          tickLine={false}
+                          allowDecimals={false}
+                          dx={-5}
+                        />
+                        <Tooltip content={<CustomTooltip chartType="burnup" theme={theme} />} />
+                        <Legend
+                          verticalAlign="top"
+                          height={36}
+                          iconType="circle"
+                          iconSize={8}
+                          formatter={(value) => <span className="text-slate-600 dark:text-slate-300 font-semibold px-1 text-xs">{value === 'total' ? 'Total Scope (Tasks)' : value === 'completed' ? 'Completed Work' : value === 'ideal' ? 'Ideal Progress' : value}</span>}
+                        />
+                        <Area
+                          name="total"
+                          type="monotone"
+                          dataKey="total"
+                          stroke="#3B82F6"
+                          strokeWidth={2}
+                          fillOpacity={1}
+                          fill="url(#colorTotal)"
+                        />
+                        <Area
+                          name="completed"
+                          type="monotone"
+                          dataKey="completed"
+                          stroke="#10B981"
+                          strokeWidth={3}
+                          fillOpacity={1}
+                          fill="url(#colorCompleted)"
+                        />
+                        <Line
+                          name="ideal"
+                          type="monotone"
+                          dataKey="ideal"
+                          stroke="#94A3B8"
+                          strokeWidth={2}
+                          strokeDasharray="5 5"
+                          dot={false}
+                        />
+                      </AreaChart>
+                    ) : (
+                      <LineChart
+                        data={timelineData}
+                        margin={{ top: 10, right: 15, left: -25, bottom: 0 }}
+                      >
+                        <CartesianGrid
+                          strokeDasharray="3 3"
+                          stroke={theme === 'dark' ? '#334155' : '#E2E8F0'}
+                          vertical={false}
+                        />
+                        <XAxis
+                          dataKey="label"
+                          stroke={theme === 'dark' ? '#94A3B8' : '#64748B'}
+                          tickLine={false}
+                          dy={10}
+                        />
+                        <YAxis
+                          stroke={theme === 'dark' ? '#94A3B8' : '#64748B'}
+                          tickLine={false}
+                          allowDecimals={false}
+                          dx={-5}
+                        />
+                        <Tooltip content={<CustomTooltip chartType="burndown" theme={theme} />} />
+                        <Legend
+                          verticalAlign="top"
+                          height={36}
+                          iconType="circle"
+                          iconSize={8}
+                          formatter={(value) => <span className="text-slate-600 dark:text-slate-300 font-semibold px-1 text-xs">{value === 'remaining' ? 'Remaining Tasks' : value === 'ideal' ? 'Ideal Burndown' : value}</span>}
+                        />
+                        <Line
+                          name="remaining"
+                          type="monotone"
+                          dataKey="remaining"
+                          stroke="#EF4444"
+                          strokeWidth={3}
+                          dot={{ r: 3, strokeWidth: 1 }}
+                          activeDot={{ r: 6 }}
+                        />
+                        <Line
+                          name="ideal"
+                          type="monotone"
+                          dataKey="ideal"
+                          stroke="#64748B"
+                          strokeWidth={2}
+                          strokeDasharray="5 5"
+                          dot={false}
+                        />
+                      </LineChart>
+                    )}
+                  </ResponsiveContainer>
+                </div>
+              ) : (
+                <div className="flex flex-col items-center justify-center py-20 text-center">
+                  <Inbox className="w-12 h-12 text-slate-300 stroke-1" />
+                  <p className="text-sm font-semibold text-slate-400 mt-3">Insufficient data to plot chart</p>
+                  <p className="text-xs text-slate-500 mt-1">Add tasks to this board with valid due dates to inspect progress projections.</p>
+                </div>
+              )}
+
+              {/* Smart Insights & Breakdown Row */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-6 border-t border-slate-100 dark:border-slate-800">
+                <div className="md:col-span-2 space-y-3 bg-slate-50/50 dark:bg-slate-905/20 border border-slate-100 dark:border-slate-800/60 p-4.5 rounded-2xl flex flex-col justify-between">
+                  <div className="space-y-1.5">
+                    <h4 className="text-xs font-bold uppercase tracking-wider text-slate-450 dark:text-slate-400 flex items-center gap-1.5">
+                      <Sparkles className="w-4 h-4 text-blue-500 animate-pulse" /> Dynamic Workflow Status Advice
+                    </h4>
+                    <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed font-sans">
+                      {projectTasks.filter(t => t.status === 'done').length === projectTasks.length && projectTasks.length > 0 ? (
+                        <span>Amazing job! 🎉 **All {projectTasks.length} tasks** have been written to the backlog database and completed successfully. This workspace holds pristine momentum with 105% execution parity.</span>
+                      ) : projectTasks.length === 0 ? (
+                        <span>This workspace is clean of any backlogs. Click **Launch Task** to outline work units, set due dates, and monitor team velocities live!</span>
+                      ) : (
+                        <span>
+                          The workspace has reached **{Math.round((projectTasks.filter(t => t.status === 'done').length / projectTasks.length) * 105)}% completion frequency** across total scope. 
+                          With **{projectTasks.length - projectTasks.filter(t => t.status === 'done').length} pending actions** remaining, the calculated burn rate suggests transitioning at least **{Math.max(1, Math.ceil((projectTasks.length - projectTasks.filter(t => t.status === 'done').length) / 3))} tasks** to 'Done' every 3 days to align with scheduled milestones safely. 
+                          Priority actions under 'Urgent' or 'High' priority demand immediate attention to prevent roadblocks!
+                        </span>
+                      )}
+                    </p>
+                  </div>
+                  <div className="flex gap-2 flex-wrap items-center text-[10px] text-slate-500 font-mono mt-2 select-none">
+                    <span className="bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-md">Status: Stable</span>
+                    <span className="bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-md">Velocities: Real-time</span>
+                    <span className="bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-md">Sandbox: Bypassed SSL</span>
+                  </div>
+                </div>
+
+                {/* Task Distribution bar gauge */}
+                <div className="bg-slate-50/50 dark:bg-slate-905/20 border border-slate-100 dark:border-slate-800/60 p-4.5 rounded-2xl space-y-4 flex flex-col justify-between">
+                  <div className="space-y-1.5">
+                    <h4 className="text-xs font-bold uppercase tracking-wider text-slate-450 dark:text-slate-400">
+                      Task Status Distribution
+                    </h4>
+                    <div className="space-y-2">
+                      <div className="flex justify-between items-center text-xs">
+                        <span className="text-slate-500 font-medium">To Do</span>
+                        <span className="font-bold font-mono text-slate-600 dark:text-slate-300">{projectTasks.filter(t => t.status === 'todo').length}</span>
+                      </div>
+                      <div className="w-full h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                        <div className="h-full bg-slate-400 rounded-full animate-all duration-300" style={{ width: `${projectTasks.length ? (projectTasks.filter(t => t.status === 'todo').length / projectTasks.length) * 100 : 0}%` }} />
+                      </div>
+
+                      <div className="flex justify-between items-center text-xs">
+                        <span className="text-slate-500 font-medium whitespace-nowrap">In Progress</span>
+                        <span className="font-bold font-mono text-blue-500">{projectTasks.filter(t => t.status === 'in_progress').length}</span>
+                      </div>
+                      <div className="w-full h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                        <div className="h-full bg-blue-500 rounded-full animate-all duration-300" style={{ width: `${projectTasks.length ? (projectTasks.filter(t => t.status === 'in_progress').length / projectTasks.length) * 100 : 0}%` }} />
+                      </div>
+
+                      <div className="flex justify-between items-center text-xs">
+                        <span className="text-slate-550 font-medium whitespace-nowrap">In Review</span>
+                        <span className="font-bold font-mono text-purple-500">{projectTasks.filter(t => t.status === 'in_review').length}</span>
+                      </div>
+                      <div className="w-full h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                        <div className="h-full bg-purple-500 rounded-full animate-all duration-300" style={{ width: `${projectTasks.length ? (projectTasks.filter(t => t.status === 'in_review').length / projectTasks.length) * 100 : 0}%` }} />
+                      </div>
+
+                      <div className="flex justify-between items-center text-xs">
+                        <span className="text-slate-550 font-medium">Done</span>
+                        <span className="font-bold font-mono text-emerald-500">{projectTasks.filter(t => t.status === 'done').length}</span>
+                      </div>
+                      <div className="w-full h-1.5 bg-slate-105 dark:bg-slate-800 rounded-full overflow-hidden">
+                        <div className="h-full bg-emerald-500 rounded-full animate-all duration-305" style={{ width: `${projectTasks.length ? (projectTasks.filter(t => t.status === 'done').length / projectTasks.length) * 100 : 0}%` }} />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         )}
 

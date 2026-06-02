@@ -6,6 +6,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { User, Project, Task, Comment, TaskStatus, TaskPriority } from '../types';
 import { INITIAL_USERS, INITIAL_PROJECTS, INITIAL_TASKS, INITIAL_COMMENTS } from '../data/mockData';
+import { translations, LanguageCode, TranslationKey } from '../utils/translations';
 
 // Toast interface
 export interface Toast {
@@ -21,6 +22,9 @@ interface AppContextType {
   comments: Comment[];
   currentUser: User | null;
   theme: 'light' | 'dark';
+  locale: LanguageCode;
+  setLocale: (locale: LanguageCode) => void;
+  t: (key: TranslationKey) => string;
   toasts: Toast[];
   globalSearchQuery: string;
   setGlobalSearchQuery: (query: string) => void;
@@ -82,6 +86,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return (saved as 'light' | 'dark') || 'light';
   });
 
+  const [locale, setLocale] = useState<LanguageCode>(() => {
+    const saved = localStorage.getItem('tf_locale');
+    return (saved as LanguageCode) || 'en';
+  });
+
   const [toasts, setToasts] = useState<Toast[]>([]);
   const [globalSearchQuery, setGlobalSearchQuery] = useState('');
 
@@ -119,6 +128,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       root.classList.remove('dark');
     }
   }, [theme]);
+
+  useEffect(() => {
+    localStorage.setItem('tf_locale', locale);
+  }, [locale]);
+
+  // Translation lookup helper
+  const t = (key: TranslationKey): string => {
+    const dict = translations[locale] || translations['en'];
+    return dict[key] || translations['en'][key] || String(key);
+  };
 
   // Toast Helper
   const addToast = (message: string, type: Toast['type'] = 'success') => {
@@ -346,6 +365,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         comments,
         currentUser,
         theme,
+        locale,
+        setLocale,
+        t,
         toasts,
         globalSearchQuery,
         setGlobalSearchQuery,

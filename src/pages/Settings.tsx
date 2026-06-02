@@ -18,7 +18,7 @@ import {
 } from 'lucide-react';
 
 export const Settings: React.FC = () => {
-  const { currentUser, theme, toggleTheme, updateProfile, addToast } = useApp();
+  const { currentUser, theme, toggleTheme, updateProfile, addToast, locale, setLocale, t } = useApp();
 
   // local form fields
   const [name, setName] = useState(currentUser ? currentUser.name : '');
@@ -40,11 +40,11 @@ export const Settings: React.FC = () => {
   const handleSaveProfile = (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) {
-      addToast('Profile display name must be non-empty', 'error');
+      addToast(locale === 'th' ? 'ชื่อที่แสดงในส่วนโปรไฟล์ห้ามเว้นว่าง' : 'Profile display name must be non-empty', 'error');
       return;
     }
     if (!email.trim() || !email.includes('@')) {
-      addToast('Please input a valid email address structure', 'error');
+      addToast(locale === 'th' ? 'โปรดระบุที่อยู่อีเมลให้ถูกต้องตามโครงสร้าง' : 'Please input a valid email address structure', 'error');
       return;
     }
     updateProfile(name.trim(), email.trim());
@@ -52,7 +52,7 @@ export const Settings: React.FC = () => {
 
   const handleSaveNotification = (e: React.FormEvent) => {
     e.preventDefault();
-    addToast('Notification preferences written successfully!', 'success');
+    addToast(locale === 'th' ? 'บันทึกการตั้งค่าการแจ้งเตือนเสร็จสิ้น!' : 'Notification preferences written successfully!', 'success');
   };
 
   return (
@@ -61,10 +61,10 @@ export const Settings: React.FC = () => {
       {/* Header index */}
       <section className="bg-white dark:bg-slate-900 border border-slate-150 dark:border-slate-800 p-5 rounded-2xl shadow-3xs transition-colors">
         <h1 className="text-xl md:text-2xl font-bold tracking-tight text-slate-845 dark:text-white flex items-center gap-2">
-          Workspace Settings
+          {t('settings')}
         </h1>
         <p className="text-xs text-slate-550 dark:text-slate-400 font-medium">
-          Customize profile contacts, visual appearances, and alert subscriptions.
+          {t('profileSettingsSub')}
         </p>
       </section>
 
@@ -77,7 +77,7 @@ export const Settings: React.FC = () => {
           {/* Profile Section Card */}
           <section className="bg-white dark:bg-slate-900 border border-slate-150 dark:border-slate-800 rounded-2xl p-5 space-y-4">
             <h2 className="text-sm font-bold text-slate-800 dark:text-slate-200 uppercase tracking-widest flex items-center gap-2">
-              <UserIcon className="w-4 h-4 text-blue-500" /> Identity Roster Card
+              <UserIcon className="w-4 h-4 text-blue-500" /> {t('personalDetails')}
             </h2>
 
             <form id="profile-setting-form" onSubmit={handleSaveProfile} className="space-y-4 font-sans text-sm">
@@ -93,7 +93,7 @@ export const Settings: React.FC = () => {
 
               <div className="space-y-1">
                 <label htmlFor="settings-name-input" className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider block">
-                  DISPLAY FULL NAME
+                  {t('fullNameLabel')}
                 </label>
                 <input
                   id="settings-name-input"
@@ -107,7 +107,7 @@ export const Settings: React.FC = () => {
 
               <div className="space-y-1">
                 <label htmlFor="settings-email-input" className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider block">
-                  EMAIL RECIPIENT
+                  {t('emailLabel')}
                 </label>
                 <input
                   id="settings-email-input"
@@ -126,7 +126,7 @@ export const Settings: React.FC = () => {
                   className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition-all shadow-md shadow-blue-500/10 cursor-pointer"
                 >
                   <Save className="w-3.5 h-3.5" />
-                  <span>Save Profile Updates</span>
+                  <span>{t('saveChanges')}</span>
                 </button>
               </div>
             </form>
@@ -214,7 +214,7 @@ export const Settings: React.FC = () => {
                   className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition-all shadow-md shadow-blue-500/10 cursor-pointer"
                 >
                   <Save className="w-3.5 h-3.5" />
-                  <span>Apply preferences</span>
+                  <span>{t('save')}</span>
                 </button>
               </div>
 
@@ -228,7 +228,7 @@ export const Settings: React.FC = () => {
           
           <section className="bg-white dark:bg-slate-900 border border-slate-150 dark:border-slate-800 rounded-2xl p-5 space-y-4">
             <h2 className="text-sm font-bold text-slate-800 dark:text-slate-200 uppercase tracking-widest">
-              Canvas appearance
+              {t('themePreference')}
             </h2>
             <div className="grid grid-cols-2 gap-3 pb-1 pt-1 font-sans text-xs">
               
@@ -244,7 +244,7 @@ export const Settings: React.FC = () => {
                 }`}
               >
                 <Sun className="w-5 h-5" />
-                <span className="font-semibold block">Day Canvas</span>
+                <span className="font-semibold block">{t('enableLightMode')}</span>
               </button>
 
               {/* Dark Mode Choice */}
@@ -259,7 +259,57 @@ export const Settings: React.FC = () => {
                 }`}
               >
                 <Moon className="w-5 h-5" />
-                <span className="font-semibold block">Midnight dark</span>
+                <span className="font-semibold block">{t('enableDarkMode')}</span>
+              </button>
+
+            </div>
+          </section>
+
+          {/* Language Preference Card */}
+          <section className="bg-white dark:bg-slate-900 border border-slate-150 dark:border-slate-800 rounded-2xl p-5 space-y-4 shadow-3xs">
+            <h2 className="text-sm font-bold text-slate-800 dark:text-slate-200 uppercase tracking-widest">
+              {t('languageLabel')}
+            </h2>
+            <div className="grid grid-cols-2 gap-3 pb-1 pt-1 font-sans text-xs">
+              
+              {/* English Switcher */}
+              <button
+                id="select-lang-en"
+                type="button"
+                onClick={() => {
+                  if (locale !== 'en') {
+                    setLocale('en');
+                    addToast('Language switched to English', 'success');
+                  }
+                }}
+                className={`flex flex-col items-center justify-center p-4 border rounded-xl gap-2 cursor-pointer transition-all ${
+                  locale === 'en'
+                    ? 'border-blue-600 bg-blue-50/20 text-blue-600 dark:border-blue-500'
+                    : 'border-slate-150 dark:border-slate-800 text-slate-450 hover:bg-slate-50 dark:hover:bg-slate-800/50'
+                }`}
+              >
+                <span className="text-xl">🇺🇸</span>
+                <span className="font-semibold block">{t('english')}</span>
+              </button>
+
+              {/* Thai Switcher */}
+              <button
+                id="select-lang-th"
+                type="button"
+                onClick={() => {
+                  if (locale !== 'th') {
+                    setLocale('th');
+                    addToast('เปลี่ยนภาษาเป็นภาษาไทยแล้ว', 'success');
+                  }
+                }}
+                className={`flex flex-col items-center justify-center p-4 border rounded-xl gap-2 cursor-pointer transition-all ${
+                  locale === 'th'
+                    ? 'border-blue-500 bg-blue-900/15 text-blue-400 dark:border-blue-500'
+                    : 'border-slate-150 dark:border-slate-800 text-slate-450 hover:bg-slate-50 dark:hover:bg-slate-800/50'
+                }`}
+              >
+                <span className="text-xl">🇹🇭</span>
+                <span className="font-semibold block">{t('thai')}</span>
               </button>
 
             </div>
@@ -268,7 +318,7 @@ export const Settings: React.FC = () => {
           {/* Workspace statistics summary cards */}
           <section className="bg-white dark:bg-slate-900 border border-slate-150 dark:border-slate-800 rounded-2xl p-5 space-y-3.5">
             <h3 className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest flex items-center gap-1.5">
-              <Key className="w-4 h-4 text-blue-505" /> Security assembly
+              <Key className="w-4 h-4 text-blue-555" /> Security assembly
             </h3>
             <div className="text-xs text-slate-500 space-y-2 leading-relaxed">
               <p>Your workspace is compiled on sandbox container. API operations bypass SSL filters automatically for development ease.</p>

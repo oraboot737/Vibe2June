@@ -6,7 +6,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
-import { Search, Plus, Bell, Sun, Moon, LogOut, Settings, User as UserIcon, Menu } from 'lucide-react';
+import { Search, Plus, Bell, Sun, Moon, LogOut, Settings, User as UserIcon, Menu, Languages } from 'lucide-react';
 
 interface TopbarProps {
   onMenuClick: () => void;
@@ -21,7 +21,11 @@ export const Topbar: React.FC<TopbarProps> = ({ onMenuClick, onAddTaskClick }) =
     theme,
     toggleTheme,
     logout,
-    tasks
+    tasks,
+    locale,
+    setLocale,
+    t,
+    addToast
   } = useApp();
   const navigate = useNavigate();
   const location = useLocation();
@@ -76,11 +80,11 @@ export const Topbar: React.FC<TopbarProps> = ({ onMenuClick, onAddTaskClick }) =
           id="mobile-drawer-toggle"
           onClick={onMenuClick}
           className="p-1 rounded-md text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 lg:hidden focus:outline-none transition-colors"
-          title="Open Menu"
+          title={t('openMenu')}
         >
           <Menu className="w-6 h-6" />
         </button>
-
+ 
         {/* Global Search Bar (expanding width on mid and high viewports) */}
         <div className="relative w-48 sm:w-64 md:w-80 max-w-md">
           <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -89,7 +93,7 @@ export const Topbar: React.FC<TopbarProps> = ({ onMenuClick, onAddTaskClick }) =
           <input
             id="global-search"
             type="search"
-            placeholder="Search tasks across boards..."
+            placeholder={t('searchPlaceholder')}
             value={globalSearchQuery}
             onChange={handleSearchChange}
             className="block w-full pl-10 pr-3 py-1.5 border border-slate-200 dark:border-slate-700 rounded-lg text-sm bg-slate-55 dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-all font-sans"
@@ -107,7 +111,22 @@ export const Topbar: React.FC<TopbarProps> = ({ onMenuClick, onAddTaskClick }) =
           className="flex items-center gap-1 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-semibold transition-all shadow-sm shadow-blue-500/10 focus:outline-none focus:ring-2 focus:ring-blue-500/20 cursor-pointer"
         >
           <Plus className="w-4 h-4" />
-          <span className="hidden sm:inline">Add Task</span>
+          <span className="hidden sm:inline">{t('addTask')}</span>
+        </button>
+
+        {/* Language Switcher eng-thai */}
+        <button
+          id="language-switcher"
+          onClick={() => {
+            const nextLang = locale === 'en' ? 'th' : 'en';
+            setLocale(nextLang);
+            addToast(translations[nextLang][nextLang === 'en' ? 'toastLanguageSwitched' : 'toastLanguageSwitchedTh'], 'info');
+          }}
+          className="flex items-center gap-1 px-2 py-1.5 rounded-lg text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-700 dark:hover:text-slate-200 transition-colors cursor-pointer text-xs font-bold font-mono"
+          title={locale === 'en' ? 'เปลี่ยนเป็นภาษาไทย' : 'Switch to English'}
+        >
+          <Languages className="w-4.5 h-4.5" />
+          <span className="hidden xs:inline">{locale === 'en' ? 'EN' : 'TH'}</span>
         </button>
 
         {/* Visual Settings: Dark Mode Toggle */}
@@ -115,7 +134,7 @@ export const Topbar: React.FC<TopbarProps> = ({ onMenuClick, onAddTaskClick }) =
           id="theme-toggler"
           onClick={toggleTheme}
           className="p-2 rounded-lg text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-700 dark:hover:text-slate-200 transition-colors"
-          title={theme === 'light' ? 'Enable dark mode' : 'Enable light mode'}
+          title={theme === 'light' ? t('enableDarkMode') : t('enableLightMode')}
         >
           {theme === 'light' ? <Moon className="w-5 h-5" /> : <Sun className="w-5 h-5" />}
         </button>
@@ -127,7 +146,6 @@ export const Topbar: React.FC<TopbarProps> = ({ onMenuClick, onAddTaskClick }) =
             onClick={() => {
               if (myOverdueTasks.length > 0) {
                 navigate('/');
-                // Just scroll or highlight a task
               } else {
                 navigate('/');
               }
@@ -163,7 +181,7 @@ export const Topbar: React.FC<TopbarProps> = ({ onMenuClick, onAddTaskClick }) =
               className="absolute right-0 mt-2 w-52 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg shadow-xl py-1 text-slate-700 dark:text-slate-200 z-50 animate-in fade-in slide-in-from-top-3 duration-200"
             >
               <div className="px-4 py-2 border-b border-slate-100 dark:border-slate-700">
-                <p className="text-xs text-slate-400 font-semibold tracking-wide">SIGNED IN AS</p>
+                <p className="text-[10px] text-slate-400 font-bold tracking-wider uppercase">{t('signedInAs')}</p>
                 <p className="text-sm font-semibold truncate text-slate-800 dark:text-white mt-0.5">{currentUser?.name}</p>
                 <p className="text-xs truncate text-slate-500 mt-0.5">{currentUser?.email}</p>
               </div>
@@ -173,10 +191,10 @@ export const Topbar: React.FC<TopbarProps> = ({ onMenuClick, onAddTaskClick }) =
                   setDropdownOpen(false);
                   navigate('/settings');
                 }}
-                className="flex items-center gap-2.5 w-full text-left px-4 py-2 text-sm hover:bg-slate-50 dark:hover:bg-slate-750 transition-colors"
+                className="flex items-center gap-2.5 w-full text-left px-4 py-2 text-sm hover:bg-slate-50 dark:hover:bg-slate-750 transition-colors cursor-pointer"
               >
                 <UserIcon className="w-4 h-4 text-slate-400" />
-                <span>My Profile</span>
+                <span>{t('myProfile')}</span>
               </button>
               <button
                 id="dropdown-goto-settings"
@@ -184,18 +202,18 @@ export const Topbar: React.FC<TopbarProps> = ({ onMenuClick, onAddTaskClick }) =
                   setDropdownOpen(false);
                   navigate('/settings');
                 }}
-                className="flex items-center gap-2.5 w-full text-left px-4 py-2 text-sm hover:bg-slate-50 dark:hover:bg-slate-750 border-b border-slate-100 dark:border-slate-700 transition-colors"
+                className="flex items-center gap-2.5 w-full text-left px-4 py-2 text-sm hover:bg-slate-50 dark:hover:bg-slate-750 border-b border-slate-100 dark:border-slate-700 transition-colors cursor-pointer"
               >
                 <Settings className="w-4 h-4 text-slate-400" />
-                <span>Settings</span>
+                <span>{t('settings')}</span>
               </button>
               <button
                 id="dropdown-signout"
                 onClick={handleLogout}
-                className="flex items-center gap-2.5 w-full text-left px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/10 transition-colors"
+                className="flex items-center gap-2.5 w-full text-left px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/10 transition-colors cursor-pointer"
               >
                 <LogOut className="w-4 h-4" />
-                <span>Sign Out</span>
+                <span>{t('signOut')}</span>
               </button>
             </div>
           )}

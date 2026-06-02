@@ -24,7 +24,7 @@ import {
 } from 'lucide-react';
 
 export const Dashboard: React.FC = () => {
-  const { tasks, projects, currentUser, users, moveTaskStatus } = useApp();
+  const { tasks, projects, currentUser, users, moveTaskStatus, t } = useApp();
   const navigate = useNavigate();
 
   // Selected state for modals
@@ -81,7 +81,7 @@ export const Dashboard: React.FC = () => {
       <div id="dashboard-hero" className="flex flex-col md:flex-row md:items-center justify-between p-6 bg-linear-to-r from-blue-600 to-indigo-600 rounded-2xl text-white shadow-xl shadow-blue-500/10 space-y-4 md:space-y-0">
         <div>
           <h1 className="text-xl md:text-2xl font-bold tracking-tight">
-            Greetings, {currentUser?.name || 'Workspace Member'}!
+            {t('welcomeBack')}, {currentUser?.name || 'Workspace Member'}!
           </h1>
           <p className="text-xs text-blue-105 font-medium mt-1">
             TaskFlow compiled for your personal schedule. Daily review for June 2, 2026.
@@ -89,15 +89,15 @@ export const Dashboard: React.FC = () => {
         </div>
         <div className="flex gap-4 items-center">
           <div className="text-right">
-            <span className="text-[10px] text-blue-200 font-bold uppercase tracking-wider block">My Completed Pace</span>
+            <span className="text-[10px] text-blue-200 font-bold uppercase tracking-wider block">{t('completedTasks')}</span>
             <span className="text-lg font-bold font-mono">
-              {myCompletedTasks.length} / {myTasks.length} Tasks
+              {myCompletedTasks.length} / {myTasks.length} {t('totalTasks')}
             </span>
           </div>
           <div className="h-10 w-px bg-blue-500" />
           <div className="flex flex-col items-center justify-center p-2 rounded-xl bg-white/10 backdrop-blur-3xs px-4">
             <TrendingUp className="w-5 h-5 text-emerald-300" />
-            <span className="text-[10px] font-bold text-slate-100 uppercase tracking-widest mt-0.5">PACE STABLE</span>
+            <span className="text-[10px] font-bold text-slate-100 uppercase tracking-widest mt-0.5">{t('stableStatus')}</span>
           </div>
         </div>
       </div>
@@ -110,7 +110,7 @@ export const Dashboard: React.FC = () => {
             <ListTodo className="w-5 h-5" />
           </div>
           <div>
-            <span className="text-xs text-slate-400 dark:text-slate-500 font-bold uppercase tracking-wider block">To Do</span>
+            <span className="text-xs text-slate-400 dark:text-slate-500 font-bold uppercase tracking-wider block">{t('todo')}</span>
             <span className="text-xl font-bold dark:text-white font-mono">{todoCount}</span>
           </div>
         </div>
@@ -120,7 +120,7 @@ export const Dashboard: React.FC = () => {
             <Clock className="w-5 h-5" />
           </div>
           <div>
-            <span className="text-xs text-slate-400 dark:text-slate-500 font-bold uppercase tracking-wider block">In Progress</span>
+            <span className="text-xs text-slate-400 dark:text-slate-500 font-bold uppercase tracking-wider block">{t('in_progress')}</span>
             <span className="text-xl font-bold dark:text-white font-mono">{inProgressCount}</span>
           </div>
         </div>
@@ -130,7 +130,7 @@ export const Dashboard: React.FC = () => {
             <Compass className="w-5 h-5" />
           </div>
           <div>
-            <span className="text-xs text-slate-400 dark:text-slate-500 font-bold uppercase tracking-wider block">In Review</span>
+            <span className="text-xs text-slate-400 dark:text-slate-500 font-bold uppercase tracking-wider block">{t('in_review')}</span>
             <span className="text-xl font-bold dark:text-white font-mono">{inReviewCount}</span>
           </div>
         </div>
@@ -140,7 +140,7 @@ export const Dashboard: React.FC = () => {
             <CheckCircle2 className="w-5 h-5" />
           </div>
           <div>
-            <span className="text-xs text-slate-400 dark:text-slate-500 font-bold uppercase tracking-wider block">Completed</span>
+            <span className="text-xs text-slate-400 dark:text-slate-500 font-bold uppercase tracking-wider block">{t('done')}</span>
             <div className="flex items-baseline gap-1.5">
               <span className="text-xl font-bold dark:text-white font-mono">{doneCount}</span>
               <span className="text-xs text-emerald-500 font-semibold">({globalCompletionRate}%)</span>
@@ -161,7 +161,7 @@ export const Dashboard: React.FC = () => {
             <section id="overdue-highlight-bar" className="bg-rose-50  dark:bg-rose-950/20 border border-rose-100 dark:border-rose-900/30 rounded-2xl p-5 space-y-3.5">
               <div className="flex items-center gap-2 text-rose-700 dark:text-rose-450">
                 <AlertOctagon className="w-5.5 h-5.5" />
-                <h2 className="text-sm font-bold uppercase tracking-wider">Overdue Warnings ({myOverdueTasks.length})</h2>
+                <h2 className="text-sm font-bold uppercase tracking-wider">{t('overdueTasks')} ({myOverdueTasks.length})</h2>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                 {myOverdueTasks.map(task => (
@@ -190,7 +190,7 @@ export const Dashboard: React.FC = () => {
           {/* Core Panel: My Tasks (Sorted by Deadline) */}
           <section id="my-upcoming-tasks-panel" className="bg-white dark:bg-slate-900 border border-slate-150 dark:border-slate-800 rounded-2xl p-5 space-y-4">
             <h2 className="text-sm font-bold text-slate-840 dark:text-slate-200 uppercase tracking-widest flex items-center gap-2">
-              <CalendarDays className="w-5 h-5 text-blue-500" /> My Action Items ({myUpcomingTasks.length})
+              <CalendarDays className="w-5 h-5 text-blue-500" /> {t('activeTasks')} ({myUpcomingTasks.length})
             </h2>
             {myUpcomingTasks.length > 0 ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -214,14 +214,14 @@ export const Dashboard: React.FC = () => {
           <section id="projects-summary-shelf" className="bg-white dark:bg-slate-900 border border-slate-150 dark:border-slate-800 rounded-2xl p-5 space-y-4">
             <div className="flex justify-between items-center pb-2.5 border-b border-slate-100 dark:border-slate-800">
               <h2 className="text-sm font-bold text-slate-840 dark:text-slate-200 uppercase tracking-widest flex items-center gap-2">
-                <FolderOpen className="w-5 h-5 text-blue-500" /> Active Boards
+                <FolderOpen className="w-5 h-5 text-blue-500" /> {t('activeBoards')}
               </h2>
               <button
                 id="dash-projects-index-btn"
                 onClick={() => navigate('/projects')}
                 className="text-[11px] text-blue-500 hover:text-blue-600 font-bold uppercase tracking-wider inline-flex items-center gap-0.5 cursor-pointer"
               >
-                <span>Directories</span> <ArrowUpRight className="w-3.5 h-3.5" />
+                <span>{t('allProjects')}</span> <ArrowUpRight className="w-3.5 h-3.5" />
               </button>
             </div>
 
